@@ -1,31 +1,16 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.myapplication.main
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,72 +37,90 @@ fun MainScreen(
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(
-                    title = {
-                        Text(text = "Home", fontSize = 22.sp)
-                    },
-                    navigationIcon = {
-                        Image(
-                            painter = painterResource(id = R.drawable.catalist),
-                            contentDescription = null,
-                            modifier = Modifier.size(50.dp)
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFFFF80AB),
-                        scrolledContainerColor = Color(0xFFFF80AB)
-                    )
+                MainTopBar()
+                MainSearchBar(
+                    query = state.query,
+                    onQueryChange = { eventPublisher(MainScreenEvent.FilterList(it)) },
+                    onSearch = { keyboard?.hide() }
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                SearchBar(query = state.query,
-                    onQueryChange = {
-                        eventPublisher(MainScreenEvent.FilterList(it))
-                    },
-                    placeholder = { Text(text = "Search here..") },
-                    onSearch = { keyboard?.hide() },
-                    active = false,
-                    onActiveChange = {},
-                    modifier = Modifier
-                        .padding(start = 15.dp)
-
-                ) {}
             }
         },
         content = {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFFCE4EC)) // Light pink
+                    .background(Color(0xFFFCE4EC))
                     .padding(top = it.calculateTopPadding())
             ) {
-                when {
-                    state.loading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-
-                    state.error != null -> {
-                        Text(
-                            text = state.error,
-                            color = Color.Red,
-                            fontSize = 22.sp,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-
-                    else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(vertical = 16.dp, horizontal = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            items(state.listCats) { cat ->
-                                MakeCatCard(cat = cat, onClickHead = { onClickHead(cat.id) })
-                            }
-                        }
-                    }
+                LoadingOrErrorSection(state = state)
+                if (!state.loading && state.error == null) {
+                    CatListSection(catList = state.listCats, onClickHead = onClickHead)
                 }
             }
         }
     )
+}
+
+@Composable
+fun MainTopBar() {
+    TopAppBar(
+        title = { Text(text = "Home", fontSize = 22.sp) },
+        navigationIcon = {
+            Image(
+                painter = painterResource(id = R.drawable.catalist),
+                contentDescription = null,
+                modifier = Modifier.size(50.dp)
+            )
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color(0xFFFF80AB),
+            scrolledContainerColor = Color(0xFFFF80AB)
+        )
+    )
+}
+
+@Composable
+fun MainSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit
+) {
+    SearchBar(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = { Text(text = "Search here..") },
+        onSearch = { onSearch() },
+        active = false,
+        onActiveChange = {},
+        modifier = Modifier.padding(start = 15.dp)
+    ) {}
+}
+
+@Composable
+fun LoadingOrErrorSection(state: MainScreenState) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            state.loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            state.error != null -> Text(
+                text = state.error,
+                color = Color.Red,
+                fontSize = 22.sp,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+    }
+}
+
+@Composable
+fun CatListSection(catList: List<Cat>, onClickHead: (String) -> Unit) {
+    LazyColumn(
+        contentPadding = PaddingValues(vertical = 16.dp, horizontal = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        items(catList) { cat ->
+            MakeCatCard(cat = cat, onClickHead = { onClickHead(cat.id) })
+        }
+    }
 }
 
 @Composable
@@ -162,7 +165,10 @@ fun MakeCatCard(cat: Cat, onClickHead: (String) -> Unit) {
                 onClick = { onClickHead(cat.id) },
                 label = { Text("Read more") },
                 leadingIcon = {
-                    Image(painter = painterResource(id = R.drawable.catalist), contentDescription = null)
+                    Image(
+                        painter = painterResource(id = R.drawable.catalist),
+                        contentDescription = null
+                    )
                 }
             )
         }
@@ -179,7 +185,10 @@ fun findThreeRandom(cat: Cat): List<String> {
 @Composable
 fun DisplayTemperaments(cat: Cat) {
     val list = findThreeRandom(cat)
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         list.forEach { temp ->
             Text(
                 text = temp,

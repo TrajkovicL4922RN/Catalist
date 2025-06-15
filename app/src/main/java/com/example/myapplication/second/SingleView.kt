@@ -1,33 +1,17 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.myapplication.second
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,85 +29,65 @@ import coil.compose.AsyncImage
 import com.example.myapplication.R
 import com.example.myapplication.model.Cat
 
-@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun SingleView(
-    onClickBack: ()->Unit,
-    onWikiClick:(wiki: String)->Unit,
-    state: SecondScreenState){
-    Scaffold (
+    onClickBack: () -> Unit,
+    onWikiClick: (String) -> Unit,
+    state: SecondScreenState
+) {
+    Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(text = "Preview")
-                },
+                title = { Text("Preview") },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        onClickBack()
-                    }) {
-                        Icon(imageVector = Icons.Default.KeyboardArrowLeft, contentDescription = "Menu icon")
+                    IconButton(onClick = onClickBack) {
+                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(255,176,95)
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFFB05F))
             )
         },
         content = {
-
-            if(state.loading){
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    CircularProgressIndicator()
-                }
-            }else if(state.error != null){
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(text = state.error, color = Color.Red, fontSize = 25.sp)
-                }
-            }else if(state.cat != null){
-                MakeCatView(
-                    cat = state.cat,
-                    it.calculateTopPadding(),
-                    onWikiClick
-                )
-            }else{
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(text = "cat not found", color = Color.Red, fontSize = 25.sp)
-                }
+            when {
+                state.loading -> SingleScreenStatus("Loading...")
+                state.error != null -> SingleScreenStatus(state.error, isError = true)
+                state.cat != null -> CatDetailsCard(cat = state.cat, it.calculateTopPadding(), onWikiClick)
+                else -> SingleScreenStatus("Cat not found", isError = true)
             }
         }
     )
 }
 
 @Composable
-fun MakeCatView(cat: Cat, calculateTopPadding: Dp, onWikiClick: (wiki: String) -> Unit) {
+fun SingleScreenStatus(message: String, isError: Boolean = false) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        if (message == "Loading...") {
+            CircularProgressIndicator()
+        } else {
+            Text(text = message, color = if (isError) Color.Red else Color.Black, fontSize = 25.sp)
+        }
+    }
+}
+
+@Composable
+fun CatDetailsCard(cat: Cat, calculateTopPadding: Dp, onWikiClick: (String) -> Unit) {
     Card(
         modifier = Modifier
             .padding(16.dp)
             .padding(top = calculateTopPadding)
-            .verticalScroll(state = rememberScrollState())
+            .verticalScroll(rememberScrollState())
             .fillMaxSize(),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(255, 176, 95))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFB05F))
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
             val catName = if (!cat.alternativeName.isNullOrEmpty())
-                "${cat.name} (${cat.alternativeName})"
-            else
-                cat.name
+                "${cat.name} (${cat.alternativeName})" else cat.name
 
             Text(
                 text = catName,
@@ -135,13 +99,11 @@ fun MakeCatView(cat: Cat, calculateTopPadding: Dp, onWikiClick: (wiki: String) -
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (cat.image?.url != null) {
+            cat.image?.url?.let {
                 AsyncImage(
-                    model = cat.image.url,
+                    model = it,
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(220.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier.size(220.dp).clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop,
                     placeholder = painterResource(id = R.drawable.catalist)
                 )
@@ -180,44 +142,34 @@ fun MakeCatView(cat: Cat, calculateTopPadding: Dp, onWikiClick: (wiki: String) -
 
 @Composable
 fun DisplayOther(cat: Cat) {
-    Column (
-        modifier = Modifier
-            .padding(10.dp)
-            .padding(vertical = 5.dp)
-    ){
-        Text(text = "Origin: "+cat.origin)
-        Text(text = "Life span: "+cat.lifeSpan)
-        Text(text = "Weight: "+cat.weight.metric)
-        Text(text = "Rare: ${if(cat.rare>0) "Yes" else "No"}")
+    Column(modifier = Modifier.padding(10.dp)) {
+        Text("Origin: ${cat.origin}")
+        Text("Life span: ${cat.lifeSpan}")
+        Text("Weight: ${cat.weight.metric}")
+        Text("Rare: ${if (cat.rare > 0) "Yes" else "No"}")
     }
 }
 
 @Composable
-fun DisplayRating(cat: Cat){
-    Column (
-        modifier = Modifier
-            .padding(10.dp)
-    ){
-        Text(text = "Adaptability")
-        RatingBar(rating = cat.adaptability)
-        Text(text = "Child friendly")
-        RatingBar(rating = cat.childFriendly)
-        Text(text = "Dog friendly")
-        RatingBar(rating = cat.dogFriendly)
-        Text(text = "Energy level")
-        RatingBar(rating = cat.energyLevel)
-        Text(text = "Intelligence")
-        RatingBar(rating = cat.intelligence)
+fun DisplayRating(cat: Cat) {
+    Column(modifier = Modifier.padding(10.dp)) {
+        Text("Adaptability")
+        RatingBar(cat.adaptability)
+        Text("Child friendly")
+        RatingBar(cat.childFriendly)
+        Text("Dog friendly")
+        RatingBar(cat.dogFriendly)
+        Text("Energy level")
+        RatingBar(cat.energyLevel)
+        Text("Intelligence")
+        RatingBar(cat.intelligence)
     }
 }
 
 @Composable
 fun DisplayAllTemperaments(cat: Cat) {
     val list = cat.allTemperaments()
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         list.forEach { tmp ->
             Text(
                 text = tmp,
@@ -234,14 +186,9 @@ fun DisplayAllTemperaments(cat: Cat) {
 }
 
 @Composable
-fun RatingBar(
-    modifier: Modifier = Modifier,
-    rating: Int = 0,
-    stars: Int = 5,
-    starsColor: Color = Color(237, 118, 14)
-) {
+fun RatingBar(rating: Int = 0, stars: Int = 5, starsColor: Color = Color(0xFFED760E)) {
     val filledStars = if (rating != 0) rating else 1
-    Row(modifier = modifier.padding(vertical = 4.dp)) {
+    Row(modifier = Modifier.padding(vertical = 4.dp)) {
         repeat(filledStars) {
             Icon(Icons.Outlined.Star, contentDescription = null, tint = starsColor)
         }
